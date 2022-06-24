@@ -29,6 +29,7 @@ import CoreGraphics
 import swift_qrcodejs
 #else
 import CoreImage
+import UIKit
 #endif
 
 // EFQRCode+Create
@@ -401,22 +402,90 @@ public class EFQRCodeGenerator: NSObject {
                     let indexYCTM = codeSize - indexX - 1
                     
                     let isStaticPoint = isStatic(x: indexX, y: indexY, size: codeSize, APLPoints: points)
-
-                    drawPoint(
-                        context: context,
-                        rect: CGRect(
-                            x: CGFloat(indexXCTM) * scaleX + foregroundPointOffset,
-                            y: CGFloat(indexYCTM) * scaleY + foregroundPointOffset,
-                            width: scaleX - 2 * foregroundPointOffset,
-                            height: scaleY - 2 * foregroundPointOffset
-                        ),
-                        isStatic: isStaticPoint
+                    
+                    let isFinderPatterns = isFinderPatterns(x: indexX, y: indexY, size: codeSize)
+                    let rect = CGRect(
+                        x: CGFloat(indexXCTM) * scaleX + foregroundPointOffset,
+                        y: CGFloat(indexYCTM) * scaleY + foregroundPointOffset,
+                        width: scaleX - 2 * foregroundPointOffset,
+                        height: scaleY - 2 * foregroundPointOffset
                     )
+ 
+                    if isFinderPatterns {
+                        // 忽略 后续DIY
+                    } else {
+                        drawPoint(
+                            context: context,
+                            rect: rect,
+                            isStatic: isStaticPoint
+                        )
+                    }
                 }
             }
+            
+            let lineWidth = scaleX - 2 * foregroundPointOffset
+            customArcFindPatterns(context: context, lineWidth: lineWidth, codeSize: codeSize, color: colorCGFront)
+            
             result = context.makeImage()
         }
         return result
+    }
+    
+    private func customArcFindPatterns(context: CGContext, lineWidth: CGFloat, codeSize: Int, color: CGColor) {
+        func pathWithRect(_ rect: CGRect) -> UIBezierPath {
+            let path = UIBezierPath(roundedRect: rect, cornerRadius: 8)
+            path.lineJoinStyle = .round
+            path.lineWidth = lineWidth // 无效
+            return path
+        }
+        
+        // 外圈定位点 find pattern
+        let rect1 = CGRect(x: 1*lineWidth, y: 1*lineWidth, width: 7*lineWidth, height: 7*lineWidth)
+        let rect2 = CGRect(x: 1*lineWidth, y: CGFloat((codeSize-8))*lineWidth, width: 7*lineWidth, height: 7*lineWidth)
+        let rect3 = CGRect(x: CGFloat((codeSize-8))*lineWidth, y: CGFloat((codeSize-8))*lineWidth, width: 7*lineWidth, height: 7*lineWidth)
+        let rects = [rect1, rect2, rect3]
+
+        // 内圈白色
+        let innerRect1 = CGRect(x: 2*lineWidth, y: 2*lineWidth, width: 5*lineWidth, height: 5*lineWidth)
+        let innerRect2 = CGRect(x: 2*lineWidth, y: CGFloat((codeSize-7))*lineWidth, width: 5*lineWidth, height: 5*lineWidth)
+        let innerRect3 = CGRect(x: CGFloat((codeSize-7))*lineWidth, y: CGFloat((codeSize-7))*lineWidth, width: 5*lineWidth, height: 5*lineWidth)
+        let innerRects = [innerRect1, innerRect2, innerRect3]
+                
+        rects.forEach { rect in
+            let path = pathWithRect(rect)
+
+            context.setFillColor(color)
+            context.addPath(path.cgPath)
+            context.closePath()
+            context.fillPath()
+        }
+
+        innerRects.forEach { rect in
+            let path = pathWithRect(rect)
+
+            context.setFillColor(UIColor.white.cgColor)
+            context.addPath(path.cgPath)
+            context.closePath()
+            context.fillPath()
+        }
+
+        // postion detection pattern
+        let circleRect1 = CGRect(x: 3*lineWidth, y: 3*lineWidth, width: 3*lineWidth, height: 3*lineWidth)
+        let circleRect2 = CGRect(x: 3*lineWidth, y: (CGFloat(codeSize-8) + 2)*lineWidth, width: 3*lineWidth, height: 3*lineWidth)
+        let circleRect3 = CGRect(x: (CGFloat(codeSize-8) + 2)*lineWidth, y: (CGFloat(codeSize-8) + 2)*lineWidth, width: 3*lineWidth, height: 3*lineWidth)
+        
+        let circle1 = UIBezierPath(roundedRect: circleRect1, cornerRadius: 3*lineWidth/2)
+        let circle2 = UIBezierPath(roundedRect: circleRect2, cornerRadius: 3*lineWidth/2)
+        let circle3 = UIBezierPath(roundedRect: circleRect3, cornerRadius: 3*lineWidth/2)
+        let circlePaths = [circle1, circle2, circle3]
+        
+        circlePaths.forEach { path in
+            context.setFillColor(color)
+            context.addPath(path.cgPath)
+            context.closePath()
+            context.fillPath()
+        }
+
     }
 
     // Create Colorful QR Image
@@ -762,6 +831,14 @@ public class EFQRCodeGenerator: NSObject {
                 && y >= Int(point.y - 2)
                 && y <= Int(point.y + 2)
         }
+    }
+    
+    private func isFinderPatterns(x: Int, y: Int, size: Int) -> Bool  {
+        // Finder Patterns
+        if (x <= 8 && y <= 8) || (x <= 8 && y >= (size - 9)) || (x >= (size - 9) && y <= 8) {
+            return true
+        }
+        return false
     }
 
     // Alignment Pattern Locations
