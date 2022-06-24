@@ -433,7 +433,7 @@ public class EFQRCodeGenerator: NSObject {
     
     private func customArcFindPatterns(context: CGContext, lineWidth: CGFloat, codeSize: Int, color: CGColor) {
         func pathWithRect(_ rect: CGRect) -> UIBezierPath {
-            let path = UIBezierPath(roundedRect: rect, cornerRadius: 8)
+            let path = UIBezierPath(roundedRect: rect, cornerRadius: rect.width*0.3)
             path.lineJoinStyle = .round
             path.lineWidth = lineWidth // 无效
             return path
