@@ -1,3 +1,4 @@
+// swift-tools-version:5.0
 //
 //  Package.swift
 //  EFQRCode
@@ -28,11 +29,18 @@ import PackageDescription
 
 let package = Package(
     name: "EFQRCode",
-    dependencies: [
-        .package(url: "https://github.com/ApolloZhu/swift_qrcodejs.git", .upToNextMinor(from: "1.1.1"))
+    products: [
+        .library(name: "EFQRCode", targets: ["EFQRCode"])
     ],
-    exclude: [
-        "Tests",
-        "Examples"
-    ]
+    dependencies: [
+        .package(url: "https://github.com/EFPrefix/swift_qrcodejs.git",
+                 .upToNextMinor(from: "2.3.0"))
+    ],
+    targets: [
+        .target(name: "EFQRCode",
+                dependencies: ["QRCodeSwift"],
+                path: "Source",
+                exclude: ["Info.plist", "Info-tvOS.plist"]),
+    ],
+    swiftLanguageVersions: [.v5]
 )
